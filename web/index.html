@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=600, height=600, initial-scale=1.0, user-scalable=no" />
+<meta name="mrbd-web-app-capable" content="yes" />
+<title>Score Scroll</title>
+<style>
+  :root{
+    --ink:#ffeaf6; --dim:#d59ec6; --playhead:#ff5ea8; --accent:#ff9ed8;
+  }
+  *{box-sizing:border-box;}
+  *:focus,.focusable:focus,.screen:focus{outline:none;}  /* no focus box */
+  html,body{
+    margin:0;padding:0;width:600px;height:600px;background:#000;overflow:hidden;
+    color:var(--ink);font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;
+    -webkit-user-select:none;user-select:none;
+  }
+  .screen{position:absolute;inset:0;width:600px;height:600px;display:none;}
+  .screen.active{display:block;}
+
+  /* ---------- MENU ---------- */
+  #menu{padding:60px 40px;}
+  #menu h1{font-size:34px;font-weight:700;text-align:center;margin:10px 0 4px;
+    color:#ffd6ee;text-shadow:0 0 14px rgba(255,94,168,.7);}
+  #menu .tag{text-align:center;color:var(--dim);font-size:16px;margin-bottom:46px;}
+  .song{
+    display:flex;align-items:center;gap:16px;
+    padding:18px 22px;margin:14px 8px;border-radius:16px;
+    border:2px solid #20323a;font-size:24px;
+  }
+  .song .meta{margin-left:auto;color:var(--dim);font-size:17px;}
+  .song.sel{border-color:var(--playhead);box-shadow:0 0 16px -2px var(--playhead);background:rgba(255,94,168,.08);}
+  #menu .foot{position:absolute;bottom:26px;left:0;right:0;text-align:center;color:var(--dim);font-size:15px;}
+
+  /* ---------- PLAYER ---------- */
+  #pTitle{position:absolute;top:16px;left:0;right:0;text-align:center;font-size:22px;font-weight:600;}
+  #lane{position:absolute;left:0;right:0;top:150px;height:300px;overflow:hidden;}
+  #strip{
+    position:absolute;top:25px;left:0;
+    image-rendering:auto;will-change:transform;transform:translate3d(0,0,0);
+    /* contrast crushes the gray AA haze to pure black + makes notes pop bright white */
+    filter:contrast(1.7) brightness(1.25);
+  }
+  #playhead{position:absolute;top:150px;height:300px;width:3px;left:200px;
+    background:var(--playhead);box-shadow:0 0 10px 2px var(--playhead);border-radius:2px;}
+  #playhead::before{content:"";position:absolute;top:-10px;left:-6px;
+    border-left:7px solid transparent;border-right:7px solid transparent;border-top:11px solid var(--playhead);}
+  #countin{position:absolute;top:62px;left:0;right:0;text-align:center;font-size:64px;font-weight:800;color:var(--accent);text-shadow:0 0 18px rgba(255,94,168,.8);opacity:0;}
+
+  #hud{position:absolute;left:0;right:0;bottom:16px;display:flex;justify-content:center;gap:30px;font-variant-numeric:tabular-nums;}
+  #hud .k{color:var(--dim);font-size:13px;display:block;text-align:center;}
+  #hud .v{font-size:24px;font-weight:600;text-align:center;}
+  #pState.playing{color:var(--accent);} #pState.paused{color:var(--dim);}
+  #pHint{position:absolute;left:0;right:0;bottom:66px;text-align:center;font-size:14px;color:var(--dim);}
+  #bar{position:absolute;left:40px;right:40px;bottom:58px;height:3px;background:#1d2c33;border-radius:2px;}
+  #barFill{position:absolute;left:0;top:0;height:3px;width:0;background:var(--accent);border-radius:2px;}
+</style>
+</head>
+<body>
+
+<!-- MENU -->
+<div id="menu" class="screen active focusable" tabindex="0">
+  <h1>🎀 Score Scroll 🎀</h1>
+  <div class="tag">✨ violin · scrolls to the beat ✨</div>
+  <div id="songList"></div>
+  <div class="foot">swipe ↑↓ to choose · pinch to open</div>
+</div>
+
+<!-- PLAYER -->
+<div id="player" class="screen focusable" tabindex="0">
+  <div id="pTitle">—</div>
+  <div id="lane"><img id="strip" alt="score" /></div>
+  <div id="playhead"></div>
+  <div id="countin"></div>
+  <div id="bar"><div id="barFill"></div></div>
+  <div id="pHint">pinch = play/pause · ↑↓ tempo · ← back a bar · → skip a bar</div>
+  <div id="hud">
+    <div><span class="k">TEMPO</span><span class="v"><span id="bpm">120</span> bpm</span></div>
+    <div><span class="k">STATE</span><span class="v" id="pState">paused</span></div>
+    <div><span class="k">BAR</span><span class="v" id="barNum">1</span></div>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // Each song needs assets/<id>.png + assets/<id>.json, produced by tools/render.js.
+  // Optional: countIn (beats, default 4).
+  var SONGS = [
+    { id:"losingu", title:"Losing U",         key:"F# major" },
+    { id:"tokyo",   title:"My Name is Tokyo",  key:"G major" },
+  ];
+
+  var PLAYHEAD_X = 200;
+  var TARGET_H   = 280;   // on-screen strip height (px) — bigger staff
+  var LANE_H     = 300;
+  var COUNT_IN   = 4;     // current song's count-in beats (set per song in loadSong)
+
+  // ---------- Web Audio metronome (proven on glasses in the spike) ----------
+  var ac=null;
+  function audio(){ if(!ac){try{ac=new (window.AudioContext||window.webkitAudioContext)();}catch(e){return null;}} if(ac.state==="suspended")ac.resume(); return ac; }
+  function click(strong){
+    var a=audio(); if(!a)return; var t=a.currentTime;
+    var o=a.createOscillator(), g=a.createGain();
+    o.frequency.value=strong?1320:880;
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(strong?0.55:0.4,t+0.002);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+0.07);
+    o.connect(g); g.connect(a.destination); o.start(t); o.stop(t+0.08);
+  }
+
+  // ---------- screens ----------
+  var menuEl=document.getElementById("menu"), playerEl=document.getElementById("player");
+  function showScreen(which){
+    [menuEl,playerEl].forEach(function(s){ s.classList.remove("active"); });
+    which.classList.add("active"); which.focus();
+  }
+
+  // ---------- menu ----------
+  var sel=0;
+  var listEl=document.getElementById("songList");
+  function renderMenu(){
+    listEl.innerHTML="";
+    SONGS.forEach(function(s,i){
+      var d=document.createElement("div");
+      d.className="song"+(i===sel?" sel":"");
+      d.innerHTML='<span>🎻</span><span>'+s.title+'</span><span class="meta">'+s.key+'</span>';
+      listEl.appendChild(d);
+    });
+  }
+  renderMenu();
+
+  // ---------- player state ----------
+  var sched=null, img=document.getElementById("strip");
+  var scale=1, pxPerBeat=100, firstBeat=0, lastBeat=0, bars=1;
+  var bpm=120, playing=false, pos=0, lastBeatClicked=-999, rafStarted=false;
+  var playFromBeat=0;  // bar start the playhead holds at during count-in, then scrolls from
+  var captureMode=false;  // offline overlay-video capture: pos is driven externally, rAF stays inert
+
+  function loadSong(i){
+    var song=SONGS[i];
+    document.getElementById("pTitle").textContent=song.title;
+    COUNT_IN=song.countIn||4;
+    fetch("assets/"+song.id+".json").then(function(r){return r.json();}).then(function(j){
+      sched=j; bpm=j.bpm; document.getElementById("bpm").textContent=bpm;
+      scale=TARGET_H/j.heightPx;
+      var p=j.points;
+      firstBeat=p[0].beat; lastBeat=p[p.length-1].beat;
+      pxPerBeat=((p[p.length-1].x-p[0].x)/(lastBeat-firstBeat))*scale;
+      bars=Math.ceil((lastBeat+1)/j.beatsPerBar);
+      img.onload=function(){
+        img.style.height=TARGET_H+"px";
+        img.style.top=Math.round((LANE_H-TARGET_H)/2)+"px";
+        resetToStart(); draw();
+      };
+      img.src="assets/"+song.id+".png";
+      if(!rafStarted){ rafStarted=true; requestAnimationFrame(frame); }
+    });
+  }
+
+  // beat -> on-screen x within the strip (already scaled)
+  function stripX(beat){
+    var p=sched.points, n=p.length;
+    if(beat<=p[0].beat)      return (p[0].x - (p[0].beat-beat)*(pxPerBeat/scale))*scale;
+    if(beat>=p[n-1].beat)    return (p[n-1].x + (beat-p[n-1].beat)*(pxPerBeat/scale))*scale;
+    // linear search (lists are short)
+    for(var i=0;i<n-1;i++){
+      if(beat>=p[i].beat && beat<=p[i+1].beat){
+        var t=(beat-p[i].beat)/(p[i+1].beat-p[i].beat);
+        return (p[i].x + t*(p[i+1].x-p[i].x))*scale;
+      }
+    }
+    return p[n-1].x*scale;
+  }
+
+  // snap a beat to the start of the bar it falls in (clamped to the song start)
+  function barStartOf(beat){
+    var bpb=sched.beatsPerBar, songStartBar=Math.floor(firstBeat/bpb)*bpb;
+    return Math.max(songStartBar, Math.floor((beat+0.001)/bpb)*bpb);
+  }
+  // begin playback from the current bar's start, after a count-in
+  function startCountIn(){
+    var shown=(pos<playFromBeat)?playFromBeat:pos;
+    playFromBeat=barStartOf(shown);
+    pos=playFromBeat-COUNT_IN;
+    lastBeatClicked=Math.floor(pos)-1;
+    setPlaying(true);
+  }
+
+  function resetToStart(){ playFromBeat=barStartOf(firstBeat); pos=playFromBeat; lastBeatClicked=Math.floor(pos)-1; setPlaying(false); }
+
+  // jump to a beat
+  function seekBeat(target){
+    target=Math.max(barStartOf(firstBeat), Math.min(lastBeat+1, target));
+    playFromBeat=barStartOf(target); pos=target; lastBeatClicked=Math.floor(pos)-1;
+  }
+
+  function draw(){
+    if(!sched)return;
+    // during count-in the strip holds at the bar start; otherwise it tracks pos
+    var anchor=(pos<playFromBeat)?playFromBeat:pos;
+    img.style.transform="translate3d("+(PLAYHEAD_X-stripX(anchor))+"px,0,0)";
+    // count-in number
+    var ci=document.getElementById("countin");
+    if(playing && pos<playFromBeat){
+      ci.textContent=Math.ceil(playFromBeat-pos); ci.style.opacity=0.95;
+    } else ci.style.opacity=0;
+    // bar number + progress
+    document.getElementById("barNum").textContent=Math.min(bars,Math.floor(anchor/sched.beatsPerBar)+1);
+    var prog=Math.max(0,Math.min(1,(anchor-firstBeat)/((lastBeat-firstBeat)||1)));
+    document.getElementById("barFill").style.width=(prog*100).toFixed(1)+"%";
+  }
+
+  var lastT=0;
+  function frame(now){
+    if(captureMode){ requestAnimationFrame(frame); return; }   // overlay capture controls pos+draw
+    if(!lastT)lastT=now; var dt=(now-lastT)/1000; lastT=now; if(dt>0.25)dt=0.25;
+    if(playing && sched){
+      pos+=dt*(bpm/60);
+      var b=Math.floor(pos);
+      if(b!==lastBeatClicked){ lastBeatClicked=b; click(b%sched.beatsPerBar===0); }
+      if(pos>=lastBeat+1){ resetToStart(); }   // song ended -> rewind to start, stay paused
+    }
+    draw();
+    requestAnimationFrame(frame);
+  }
+
+  function setPlaying(p){
+    playing=p;
+    var s=document.getElementById("pState");
+    s.textContent=p?"playing":"paused"; s.className=p?"playing":"paused";
+    if(p){ audio(); lastT=0; }
+  }
+  function setBpm(v){ bpm=Math.max(40,Math.min(220,v)); document.getElementById("bpm").textContent=bpm; }
+
+  // ---------- input ----------
+  document.addEventListener("keydown",function(e){
+    if(menuEl.classList.contains("active")){
+      if(e.key==="ArrowUp"){ sel=(sel-1+SONGS.length)%SONGS.length; renderMenu(); e.preventDefault(); }
+      else if(e.key==="ArrowDown"){ sel=(sel+1)%SONGS.length; renderMenu(); e.preventDefault(); }
+      else if(e.key==="Enter"){ audio(); loadSong(sel); showScreen(playerEl); e.preventDefault(); }
+      return;
+    }
+    // player screen
+    switch(e.key){
+      case "Enter":
+        audio();
+        if(playing) setPlaying(false);      // pause immediately
+        else startCountIn();                // resume from current bar start, after a 4-beat count-in
+        e.preventDefault(); break;
+      case "ArrowUp":   setBpm(bpm+2); e.preventDefault(); break;
+      case "ArrowDown": setBpm(bpm-2); e.preventDefault(); break;
+      case "ArrowLeft": {
+        var bpb=sched.beatsPerBar;
+        var ref=(pos<playFromBeat)?playFromBeat:pos;
+        if(!playing && ref<=barStartOf(firstBeat)+0.01){ showScreen(menuEl); e.preventDefault(); break; } // at start & paused -> menu
+        var barStart=Math.floor((ref+1e-6)/bpb)*bpb;
+        seekBeat((ref-barStart>0.25)?barStart:barStart-bpb);          // 1st press: snap to bar start; again: previous bar
+        e.preventDefault(); break;
+      }
+      case "ArrowRight": {
+        var ref2=(pos<playFromBeat)?playFromBeat:pos;
+        seekBeat(barStartOf(ref2)+sched.beatsPerBar);
+        e.preventDefault(); break;
+      }
+    }
+  });
+
+  // desktop testing helpers
+  document.addEventListener("click",function(){
+    if(menuEl.classList.contains("active")){ audio(); loadSong(sel); showScreen(playerEl); }
+    else { audio(); if(playing) setPlaying(false); else startCountIn(); }
+  });
+  window.addEventListener("focus",function(){ (menuEl.classList.contains("active")?menuEl:playerEl).focus(); });
+
+  menuEl.focus();
+
+  // Deep link: ?song=<index> opens that song's player directly.
+  var q=new URLSearchParams(location.search).get("song");
+  if(q!==null){ sel=+q||0; loadSong(sel); showScreen(playerEl); }
+
+  // Capture API — used only by tools/render-overlay.js to render the score as a
+  // transparent overlay video (the glasses don't sync the HUD with screen capture,
+  // so demos are composited from a clean overlay). Harmless in normal use.
+  window.ScoreCapture={
+    info:function(){ return {firstBeat:firstBeat,lastBeat:lastBeat,bpm:bpm,countIn:COUNT_IN,bars:bars}; },
+    seek:function(beat){ captureMode=true; playing=true; playFromBeat=barStartOf(firstBeat);
+      var s=document.getElementById("pState"); s.textContent="playing"; s.className="playing";
+      pos=beat; draw(); },
+    useAlphaStrip:function(src){ img.src=src;
+      document.documentElement.style.background="transparent"; document.body.style.background="transparent"; }
+  };
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+{
+  "name": "score-render",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "dependencies": {
+    "opensheetmusicdisplay": "^2.0.0",
+    "puppeteer-core": "^25.1.0"
+  }
+}
