@@ -20,6 +20,7 @@ owners. Web-first, glasses as the halo. De-risks us from one hardware platform.
 | D4 | **Progressive auth** — anonymous to try, account to persist/sync/glasses | Protect the activation moment; only gate persistence and the glasses URL |
 | D5 | **Private-locker model** — everything private, no public score sharing in V1 | A personal storage tool for content you own is low legal risk; a distribution platform is high risk |
 | D6 | **Configure on the big screen, consume on the glasses** | No keyboard on glasses; build library on web/phone, push via a tokened personal URL |
+| D7 | **All-Cloudflare infra** (Pages + Workers + R2 + D1); avoid Vercel for hosting | Cheapest at any scale — R2 has $0 egress; CF Pages is commercial-OK on free tier (Vercel Hobby is non-commercial). Browser render = $0 compute. See `ARCHITECTURE.md` → Infrastructure & cost |
 
 ## Answering the two open questions
 - **Upload format:** Accept **MusicXML / MXL** (and MIDI) directly, parsed

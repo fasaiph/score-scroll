@@ -13,7 +13,7 @@ contracts landing first.
 ## WS-A — App shell & shared player · `packages/player`, `app/`
 Lift the working scroll engine out of `index.html` into a reusable `<Player>`;
 stand up the Next.js shell with web + glasses routes.
-- A/T1 `todo` — Next.js on Vercel scaffold; web route + `g/[token]` route.
+- A/T1 `todo` — Next.js/SPA on **Cloudflare Pages** scaffold; web route + `g/[token]` route.
 - A/T2 `todo` — Extract scroll/clock/metronome/count-in/bar-nav into `<Player>` (Contract 5).
 - A/T3 `todo` — Input layer: arrow-keys+Enter (glasses) and on-screen controls (web) → same actions.
 - A/T4 `todo` — Wire `<Player>` to load a song by `{schedule, stripUrl}`.
@@ -39,10 +39,11 @@ Normalize real-world files before render (the 60% unglamorous work).
 - **Done when:** the priority-ordered cases render correctly or fail with a clear message.
 
 ## WS-D — Auth, data model & storage · `infra/`, `app/api`
-Progressive auth + library API (Contracts 3).
-- D/T1 `todo` — Magic-link / Google auth; anonymous session id.
-- D/T2 `todo` — Postgres schema (users, songs, settings); Vercel Blob for assets.
-- D/T3 `todo` — `/api/songs` CRUD + `/api/me`.
+Progressive auth + library API (Contracts 3). Cheap stack: Clerk-free/Workers-auth +
+**D1** (metadata) + **R2** (assets). Optional $0-MVP first step: IndexedDB-only (no DB/auth).
+- D/T1 `todo` — Magic-link / Google auth (Clerk free or Workers + Resend); anonymous session id.
+- D/T2 `todo` — D1 schema (users, songs, settings); R2 bucket for strip PNGs.
+- D/T3 `todo` — `/api/songs` CRUD + `/api/me` (Cloudflare Workers).
 - D/T4 `todo` — Claim-on-signup: migrate anon assets to the new account.
 - **Done when:** a song uploaded anonymously survives sign-in and lists across devices.
 
@@ -55,7 +56,7 @@ Tokened per-user URL + QR; configure-on-web/consume-on-glasses loop (Contract 4)
 - **Done when:** adding a song on web appears on the paired glasses with no re-add.
 
 ## WS-F — `.mscz` conversion worker · `workers/mscz`
-- F/T1 `todo` — Containerized MuseScore (+ Xvfb) service or Vercel Sandbox: `.mscz → MusicXML`.
+- F/T1 `todo` — **Scale-to-zero** MuseScore (+ Xvfb) runner (Cloud Run / Fly stop / Vercel Sandbox): `.mscz → MusicXML`. Pay-per-conversion, never idle.
 - F/T2 `todo` — Upload queue + status; hand MusicXML to the WS-B path.
 - **Done when:** a `.mscz` upload yields the same result as its MusicXML export.
 
