@@ -8,6 +8,11 @@ on the glasses, driven entirely by Neural Band pinches and swipes.
 ![menu](docs/menu.png)
 ![player](docs/player.png)
 
+> **🚀 Live MVP — upload your own score:** https://score-scroll-app.vercel.app
+> Drop in a MusicXML file and it renders **in your browser** and scrolls on the
+> beat — no install, no account. Code in [`app/`](./app); productionization plan in
+> [`planning/`](./planning). The original two-song demo lives in [`web/`](./web).
+
 ## How it works
 
 The glasses run a standard HTML/CSS/JS page (Meta's "Web Apps" path), so there's no

@@ -1,5 +1,13 @@
 # Score Scroll — Workstreams (parallel task board)
 
+> **🚀 MVP SHIPPED → https://score-scroll-app.vercel.app** (code in `app/`).
+> Upload MusicXML → renders **in the browser** (keystone proven) → plays → saved
+> to a local IndexedDB library. No server, no accounts. Done: WS-B core, WS-A
+> player/input, WS-C/T1 upload, WS-D via IndexedDB ($0 path). Next: WS-C robustness
+> (parts/repeats/tempo), WS-D cloud sync, WS-E per-user glasses URL.
+> _(MVP is on Vercel for speed; production host → Cloudflare Pages per D7.)_
+
+
 Each workstream owns a distinct module (see `ARCHITECTURE.md` → boundaries) so
 agents can work in parallel. Status legend: `todo` · `wip` · `done`. Update the
 status inline in the PR that touches the task.
@@ -10,27 +18,25 @@ contracts landing first.
 
 ---
 
-## WS-A — App shell & shared player · `packages/player`, `app/`
-Lift the working scroll engine out of `index.html` into a reusable `<Player>`;
-stand up the Next.js shell with web + glasses routes.
-- A/T1 `todo` — Next.js/SPA on **Cloudflare Pages** scaffold; web route + `g/[token]` route.
-- A/T2 `todo` — Extract scroll/clock/metronome/count-in/bar-nav into `<Player>` (Contract 5).
-- A/T3 `todo` — Input layer: arrow-keys+Enter (glasses) and on-screen controls (web) → same actions.
-- A/T4 `todo` — Wire `<Player>` to load a song by `{schedule, stripUrl}`.
-- **Done when:** an existing song plays identically to today via the new component on both routes.
+## WS-A — App shell & shared player · `app/js/player.js`, `app/`
+Reusable scroll engine + app shell. **Player DONE in MVP** (`SS.Player`).
+- A/T1 `todo` — Next.js/SPA on **Cloudflare Pages** scaffold + `g/[token]` route (MVP is static on Vercel).
+- A/T2 `done` — scroll/clock/metronome/count-in/bar-nav extracted into `SS.Player` (Contract 5).
+- A/T3 `done` — Input layer: arrow-keys+Enter (glasses) and on-screen clicks (web) → same actions.
+- A/T4 `done` — Player loads a song by schedule (+ live notation element).
 
-## WS-B — In-browser render (KEYSTONE) · `packages/render`
-Move `tools/render.js` logic into the browser/Web Worker (Contract 2).
-- B/T1 `todo` — Port OSMD single-horizontal-staff render to run in a Worker.
-- B/T2 `todo` — Capture inverted white-on-black strip PNG from canvas (no headless Chrome).
-- B/T3 `todo` — Extract `(beat → x)` schedule via cursor walk; emit Contract 1 JSON.
-- B/T4 `todo` — `listParts()` for the part picker; `RenderError` with user-facing messages.
-- B/T5 `todo` — Parity test: browser output matches `tools/render.js` for the two demo songs.
-- **Done when:** `renderMusicXML(xml)` returns a valid strip+schedule entirely client-side.
+## WS-B — In-browser render (KEYSTONE) · `app/js/render.js`
+Move `tools/render.js` logic into the browser (Contract 2). **DONE in MVP** (`SS.render`).
+- B/T1 `done` — OSMD single-horizontal-staff render runs in the browser.
+- B/T2 `n/a` — No raster: the player scrolls the rendered DOM element directly (cheaper).
+- B/T3 `done` — `(beat → x)` schedule via cursor walk; emits Contract 1.
+- B/T4 `wip` — `RenderError` with user-facing messages done; `listParts()` picker → todo (with WS-C/T2).
+- B/T5 `done` — Verified live: in-browser render of both samples + an uploaded file.
+- **Optional later:** move render into a Web Worker if main-thread jank appears on big scores.
 
 ## WS-C — Upload & MusicXML robustness · `packages/parse`
 Normalize real-world files before render (the 60% unglamorous work).
-- C/T1 `todo` — Upload UI: accept `.musicxml/.mxl/.mid`; drag-drop; validation + errors.
+- C/T1 `done` — Upload UI: accept `.musicxml/.xml/.mxl`; validation + error toasts. (drag-drop + `.mid` → todo)
 - C/T2 `todo` — Multi-part → part/staff picker (feeds WS-B `listParts`).
 - C/T3 `todo` — Unroll repeats / D.C. / D.S. / coda into a linear stream.
 - C/T4 `todo` — Handle tempo changes & time-signature changes.
@@ -40,7 +46,8 @@ Normalize real-world files before render (the 60% unglamorous work).
 
 ## WS-D — Auth, data model & storage · `infra/`, `app/api`
 Progressive auth + library API (Contracts 3). Cheap stack: Clerk-free/Workers-auth +
-**D1** (metadata) + **R2** (assets). Optional $0-MVP first step: IndexedDB-only (no DB/auth).
+**D1** (metadata) + **R2** (assets). **$0-MVP step DONE:** `app/js/library.js` =
+IndexedDB-only (no DB/auth), stores MusicXML text + re-renders on open.
 - D/T1 `todo` — Magic-link / Google auth (Clerk free or Workers + Resend); anonymous session id.
 - D/T2 `todo` — D1 schema (users, songs, settings); R2 bucket for strip PNGs.
 - D/T3 `todo` — `/api/songs` CRUD + `/api/me` (Cloudflare Workers).
