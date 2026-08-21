@@ -17,7 +17,7 @@
     <div class="tag">✨ upload a score · scroll it on the beat ✨</div>
     <div id="songList"></div>
     <div class="foot">swipe ↑↓ to choose · pinch to open</div>
-    <input id="fileInput" type="file" accept=".musicxml,.xml,.mxl" hidden />
+    <input id="fileInput" type="file" accept=".musicxml,.xml,.mxl,.cho,.chopro,.crd,.pro,.txt" hidden />
   </div>
 
   <!-- PLAYER -->
@@ -35,6 +35,44 @@
     </div>
   </div>
 
+  <!-- SETUP (chord charts): transpose / capo / metronome before playing -->
+  <div id="setup" class="screen focusable" tabindex="0">
+    <div id="sTitle">—</div>
+    <div id="sArtist"></div>
+    <div id="sRows">
+      <div class="srow" data-k="transpose"><span class="k">Transpose</span><span class="v" id="sTranspose">0</span><span class="note" id="sKey"></span></div>
+      <div class="srow" data-k="capo"><span class="k">Capo</span><span class="v" id="sCapo">0</span><span class="note" id="sShapes"></span></div>
+      <div class="srow" data-k="click"><span class="k">Metronome</span><span class="v" id="sClick">off</span><span class="note">click in your ear on every beat</span></div>
+      <div class="srow act" data-k="start"><span class="k">▶ Start</span><span class="note" id="sMeta"></span></div>
+      <div class="srow act" data-k="back"><span class="k">◀ Library</span></div>
+    </div>
+    <div id="sChords"></div>
+    <div class="foot">↑↓ choose · ←→ adjust · pinch = start</div>
+  </div>
+
+  <!-- CHART (chords + lyrics) -->
+  <div id="chart" class="screen focusable" tabindex="0">
+    <div id="cTitle">—<small id="cKey"></small></div>
+    <div id="cHead">
+      <div id="nowDiag" class="diag"></div>
+      <div id="nowChord">—</div>
+      <div id="cArrow">›</div>
+      <div id="nextChord"></div>
+      <div id="nextDiag" class="diag"></div>
+    </div>
+    <div id="beats"></div>
+    <div id="section"></div>
+    <div id="nowBand"></div>
+    <div id="lines"><div id="linesInner"></div></div>
+    <div id="cCountin"></div>
+    <div id="cBar"><div id="cBarFill"></div></div>
+    <div id="cHud">
+      <div><span class="k">TEMPO</span><span class="v"><span id="cBpm">100</span> bpm</span></div>
+      <div><span class="k">STATE</span><span class="v paused" id="cState">paused</span></div>
+      <div><span class="k">BAR</span><span class="v" id="cBarNum">1</span></div>
+    </div>
+  </div>
+
   <!-- toast -->
   <div id="toast"></div>
 </div>
@@ -42,6 +80,8 @@
 <script src="lib/osmd.min.js"></script>
 <script src="js/render.js"></script>
 <script src="js/player.js"></script>
+<script src="js/chords.js"></script>
+<script src="js/chart.js"></script>
 <script src="js/library.js"></script>
 <script src="js/app.js"></script>
 </body>

@@ -79,8 +79,9 @@ Tokened per-user URL + QR; configure-on-web/consume-on-glasses loop (Contract 4)
 - H/T3 `todo` — Analytics events: activation, glasses-attach, retention, upload-failure-by-type.
 
 ## WS-I — Guitar / tabs / chords+lyrics (Phase 3) · `packages/render` (new renderer)
-- I/T1 `todo` — Tab + chord/lyric renderer (ChordPro / Guitar Pro import) — separate from notation.
-- I/T2 `todo` — Lyrics/vocals scroll mode.
+- I/T1 `done` (2026-08-19) — ChordPro chord/lyric chart renderer (`app/js/chords.js` + `app/js/chart.js`): beat-locked (one [chord] = one bar), current/next chord diagrams, transpose + capo + metronome setup screen, `.cho` upload, 2 PD samples. Shares `SS.Transport` with the notation player. Guitar Pro / tablature: not started.
+- I/T2 `done` (2026-08-19) — lyrics scroll is the chart view itself (karaoke-style line stepping, current bar glows).
+- I/T3 `todo` — author/edit charts on a big screen and push to glasses (ties to WS-E; today songs are hardcoded in `app/samples` or uploaded on-device).
 - **Note:** different rendering model than staff notation; scope as its own project.
 
 ---

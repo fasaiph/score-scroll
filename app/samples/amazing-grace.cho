@@ -1,0 +1,31 @@
+{title: Amazing Grace}
+{artist: Traditional (John Newton)}
+{key: G}
+{time: 3/4}
+{tempo: 72}
+{countin: 3}
+# one [chord] = one bar. Words before a line's first chord are the pickup.
+
+{c: Verse 1}
+A-[G]mazing [G7]grace, how [C]sweet the [G]sound
+That [G]saved a [Em]wretch like [D]me [D7]
+I [G]once was [G7]lost, but [C]now am [G]found
+Was [Em]blind, but [D]now I [G]see [G]
+
+{c: Verse 2}
+'Twas [G]grace that [G7]taught my [C]heart to [G]fear
+And [G]grace my [Em]fears re[D]lieved [D7]
+How [G]precious [G7]did that [C]grace ap[G]pear
+The [Em]hour I [D]first be[G]lieved [G]
+
+{c: Verse 3}
+Through [G]many [G7]dangers, [C]toils and [G]snares
+I [G]have al[Em]ready [D]come [D7]
+'Tis [G]grace hath [G7]brought me [C]safe thus [G]far
+And [Em]grace will [D]lead me [G]home [G]
+
+{c: Verse 4}
+When [G]we've been [G7]there ten [C]thousand [G]years
+Bright [G]shining [Em]as the [D]sun [D7]
+We've [G]no less [G7]days to [C]sing God's [G]praise
+Than [Em]when we'd [D]first be[G]gun [G*2]

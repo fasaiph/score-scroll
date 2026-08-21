@@ -40,10 +40,49 @@ At runtime the player runs a clock at the chosen BPM and slides the strip (GPU
 the scheduled points. Changing tempo just rescales the clock — no re-render. All the
 heavy lifting happens offline, so the glasses only move an image.
 
+## Guitar + singer mode (chords · lyrics · transposition)
+
+The same glasses app doubles as an **open-mic teleprompter**: a ChordPro chart
+scrolls beat-locked, the current chord's fretboard shape and the next chord sit up
+top, and the current lyric glows. Transpose / capo / metronome are set on a
+pre-play screen (↑↓ pick a row, ←→ adjust, pinch to start). Songs live in
+`app/samples/*.cho` (two public-domain samples are bundled, plus *Father and Son*
+as a chords-only chart with lyric cues — paste your own lyric text in) — add yours there and
+register them in `app/js/library.js` `seedSamples`, or upload a `.cho` file from
+the library screen.
+
+![chart](docs/chart.png)
+
+**ChordPro conventions used by the scheduler** (one `[Chord]` = one bar):
+
+```
+{title: Amazing Grace}   {key: G}   {time: 3/4}   {tempo: 72}   {countin: 3}
+{c: Verse 1}                      ← section label (shown top-right)
+A-[G]mazing [G7]grace, how [C]sweet the [G]sound     ← 4 bars; "A-" is the pickup
+Was [Em]blind, but [D]now I [G]see [G*2]             ← [G*2] holds G for 2 bars
+```
+
+- Every `[Chord]` starts a new bar; repeat the chord (or use `*N`) to hold it.
+- Lines wider than the display wrap at bar boundaries into extra rows automatically.
+- `{time: 6/8}` is treated as 2 pulses per bar (compound meter); `{tempo}` is in pulses.
+- Transposition respells chords for the target key (flat keys get flats); capo
+  shows the *shapes you play* (`capo 2` in A → G shapes) and labels the diagram.
+- Shapes: open-position voicings for common chords, barre (E/A form) math for the
+  rest, slash chords draw the main chord. Unknown extensions fall back to the
+  nearest family.
+
 ## Project layout
 
 ```
-web/                 the glasses app (static site)
+app/                 the live MVP (static site, in-browser render) — deploy this
+  js/player.js       SS.Transport (clock/count-in/metronome/bar nav) + SS.Player (notation strip)
+  js/render.js       MusicXML -> OSMD horizontal staff + (beat -> x) schedule, in the browser
+  js/chords.js       ChordPro parser, transposition/capo, chord-shape dictionary, SVG diagrams
+  js/chart.js        SS.Chart — guitar + singer teleprompter view
+  js/library.js      IndexedDB library (MusicXML + ChordPro records) + bundled samples
+  js/app.js          screens (library → player | setup → chart) + D-pad input
+  samples/           bundled demo scores (.musicxml) and chord charts (.cho)
+web/                 the original 2-song demo (static site)
   index.html         self-contained player + menu
   assets/            <song>.png + <song>.json (generated)
   vercel.json        static deploy config
@@ -115,6 +154,16 @@ cd ../tools
 node render-overlay.js 1 alpha 30 ../build/frames 8930   # <songIdx> <alpha|black> <fps> <out> <port>
 # then encode the frames to ProRes 4444 / VP9 webm (alpha) or H.264 (black + Screen blend)
 ```
+
+For a **chord chart** overlay (guitar + singer view) use the chart renderer against `app/`:
+
+```bash
+cd app && python3 -m http.server 8765 &
+cd ../tools
+node render-overlay-chart.js sample-cant-help -3 30 ../build/overlay/ch_A 8765   # <songId> <transpose> <fps> <out> <port> [capo]
+```
+It opens `app/?chart=<id>&transpose=N` (a deep link you can also use directly) and
+steps the clock frame by frame; encode notes are at the bottom of the script.
 
 ## License
 

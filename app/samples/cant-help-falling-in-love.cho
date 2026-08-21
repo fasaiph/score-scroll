@@ -1,0 +1,13 @@
+{title: Can't Help Falling in Love}
+{artist: Elvis Presley}
+{key: C}
+{transpose: -3}
+{time: 6/8}
+{tempo: 68}
+{countin: 4}
+# One [chord] = one bar (6/8, 2 pulses per bar). Written in C; {transpose: -3} opens it in A major by default
+# (C→A, G→E, Am→F#m, F→D) — change on the setup screen any time.
+
+{c: Verse 1}
+[C]Wise [G]men [Am]say [Am]only [F]fools [C]rush [G]in [G]
+But [F]I [G]can't [Am]help [F]falling in [C]love [G]with [C]you
