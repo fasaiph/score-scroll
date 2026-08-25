@@ -63,7 +63,10 @@ SS.render = async function render(xml, mountEl, opts) {
   let guard = 0;
   while (!it.EndReached && guard < 10000) {
     guard++;
-    const tsObj = it.CurrentSourceTimestamp;
+    // Enrolled timestamp = cumulative PLAYBACK time (monotonic through repeats /
+    // voltas); source timestamp rewinds at a repeat jump. Beat axis must be
+    // monotonic, so prefer enrolled; x still comes from the (re-visited) measure.
+    const tsObj = it.CurrentEnrolledTimestamp || it.CurrentSourceTimestamp;
     const ts = tsObj ? tsObj.RealValue : null;
     const el = cur.cursorElement;
     let x = null;
@@ -81,6 +84,14 @@ SS.render = async function render(xml, mountEl, opts) {
   cur.hide();
 
   if (pts.length < 2) throw new SS.RenderError("No playable notes were found in this score.");
+
+  // drop trailing silent bars: keep one rest onset after the last note as the end anchor
+  let lastNote = -1;
+  for (let i = pts.length - 1; i >= 0; i--) if (!pts[i].rest) { lastNote = i; break; }
+  if (lastNote >= 0 && lastNote + 2 < pts.length) pts.length = lastNote + 2;
+
+  // guard the invariant (ascending beats) in case of parser oddities
+  for (let i = pts.length - 1; i > 0; i--) if (pts[i].beat <= pts[i - 1].beat) pts.splice(i, 1);
 
   // make the rendered notation luminous (white-on-black) for the additive display
   mountEl.style.filter = "invert(1) contrast(1.7) brightness(1.25)";
