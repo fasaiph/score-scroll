@@ -148,7 +148,18 @@
   function at(name, dur) { events.push({ name: name, t0: T, t1: T + (dur || 0) }); }
 
   // ---- storyboard ----------------------------------------------------------
+  // ?plain=1 -> no controls demo: straight through the exercises, chords at the end
+  var PLAIN = /[?&]plain=1/.test(location.search);
   at("keyC"); at("view:score");
+  if (PLAIN) {
+    countIn(4, 120);
+    for (var r = 0; r < 6; r++) play(ROT, 120);   // all six rotations, uninterrupted
+    at("view:chords");
+    play(2 * ROT, 120);                           // chords-only finale, next-chord preview
+    at("fade", 1.2);
+    pauseHold(1.2, 120);
+  } else buildFull();
+  function buildFull() {
   countIn(4, 120);                       // 4-3-2-1
   play(ROT, 120);                        // rotation 1 — snippet 1 (scale)
   play(ROT, 120);                        // rotation 2 — snippet 2 (modes)
@@ -181,6 +192,7 @@
   play(22, 90);                          // big now/next, no score
   at("fade", 1.2);
   pauseHold(1.2, 90);
+  }
   var DURATION = T;
 
   // ---- static DOM prep -----------------------------------------------------
