@@ -1,0 +1,304 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<title>Score Scroll — practice loop demo (overlay capture)</title>
+<!-- Deterministic demo timeline for a ii–V–I practice loop overlay video.
+     Serve the REPO ROOT (python3 -m http.server 8770) and open
+     /tools/demo-practice-loop.html . Everything is a pure function of time:
+     window.DemoCapture.seek(seconds) renders that exact frame;
+     window.DemoCapture.info() returns { duration }.
+     Storyboard: count-in → exercise rotations (a score snippet per rotation)
+     → tap pause/play → swipe back a bar → menu: BPM down → menu: key C→Bb
+     → chords-only mode (big now/next) → fade out. -->
+<style>
+  :root{ --ink:#ffeaf6; --dim:#d59ec6; --playhead:#ff5ea8; --accent:#ff9ed8; }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;width:600px;height:600px;background:#000;overflow:hidden;
+    color:var(--ink);font-family:-apple-system,"Helvetica Neue",Arial,sans-serif;-webkit-user-select:none;user-select:none;}
+  #stage{position:relative;width:600px;height:600px;overflow:hidden;}
+
+  #title{position:absolute;top:12px;left:0;right:0;text-align:center;font-size:19px;font-weight:600;}
+  #title small{color:var(--dim);font-weight:400;font-size:14px;margin-left:10px;}
+
+  /* chord header (same family as the app's chart view) */
+  #head{position:absolute;left:0;right:0;top:40px;height:128px;display:flex;justify-content:center;align-items:center;gap:20px;
+    transition:transform .4s ease, top .4s ease;}
+  #nowDiag{width:96px;height:108px;} #nextDiag{width:80px;height:92px;opacity:.6;}
+  #nowChord{font-size:60px;font-weight:800;color:#fff;text-shadow:0 0 18px rgba(255,94,168,.9);min-width:150px;text-align:center;line-height:1;}
+  #cArrow{color:var(--dim);font-size:28px;}
+  #nextChord{font-size:34px;font-weight:700;color:var(--accent);opacity:.75;min-width:88px;text-align:center;}
+  #beats{position:absolute;left:0;right:0;top:172px;display:flex;justify-content:center;gap:10px;transition:top .4s ease;}
+  #beats i{width:13px;height:13px;border-radius:50%;border:2px solid var(--dim);display:inline-block;}
+  #beats i.on{background:var(--playhead);border-color:var(--playhead);box-shadow:0 0 8px var(--playhead);}
+
+  /* score snippet (whole exercise in one view, no scrolling) */
+  #scoreBox{position:absolute;left:20px;right:20px;top:200px;height:300px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:10px;}
+  #rotLabel{font-size:12px;letter-spacing:.14em;color:var(--dim);text-transform:uppercase;}
+  #snippet{max-width:560px;max-height:230px;object-fit:contain;}
+  #pips{display:flex;gap:8px;}
+  #pips i{width:74px;height:4px;border-radius:2px;background:#2a1a24;display:inline-block;}
+  #pips i.on{background:var(--playhead);box-shadow:0 0 8px var(--playhead);}
+
+  /* chords-only mode: header grows to the middle, score hidden */
+  #stage.chordsOnly #head{top:150px;height:180px;gap:14px;padding:0 6px;}
+  #stage.chordsOnly #nowChord{font-size:72px;min-width:0;flex:0 1 auto;}
+  #stage.chordsOnly #nextChord{font-size:36px;min-width:0;flex:0 1 auto;}
+  #stage.chordsOnly #nowDiag{width:104px;height:120px;flex:none;}
+  #stage.chordsOnly #nextDiag{width:84px;height:98px;flex:none;}
+  #stage.chordsOnly #beats{top:352px;}
+  #stage.chordsOnly #scoreBox{display:none;}
+
+  #countin{position:absolute;top:210px;left:0;right:0;text-align:center;font-size:96px;font-weight:800;
+    color:var(--accent);text-shadow:0 0 24px rgba(255,94,168,.9);opacity:0;pointer-events:none;}
+
+  #hud{position:absolute;left:0;right:0;bottom:14px;display:flex;justify-content:center;gap:30px;font-variant-numeric:tabular-nums;}
+  #hud .k{color:var(--dim);font-size:12px;display:block;text-align:center;}
+  #hud .v{font-size:22px;font-weight:600;text-align:center;display:block;}
+  .v.playing{color:var(--accent);} .v.paused{color:var(--dim);}
+
+  /* menu sheet (mirrors the app's setup screen rows) */
+  #menu{position:absolute;left:90px;right:90px;top:150px;background:rgba(20,6,14,.96);border:2px solid #4a2740;border-radius:18px;
+    padding:20px 22px;opacity:0;transform:translateY(14px);transition:opacity .35s,transform .35s;pointer-events:none;}
+  #menu.show{opacity:1;transform:none;}
+  #menu h3{margin:0 0 12px;text-align:center;font-size:16px;color:#ffd6ee;letter-spacing:.06em;}
+  .mrow{display:flex;align-items:baseline;gap:14px;padding:10px 16px;border-radius:12px;border:2px solid #20323a;font-size:20px;margin-bottom:9px;}
+  .mrow .k{min-width:86px;} .mrow .v{font-weight:700;color:var(--accent);min-width:88px;text-align:right;margin-left:auto;font-variant-numeric:tabular-nums;}
+  .mrow.sel{border-color:var(--playhead);box-shadow:0 0 14px -2px var(--playhead);background:rgba(255,94,168,.08);}
+  #menu .hint{text-align:center;color:var(--dim);font-size:13px;margin-top:4px;}
+  .adj{color:var(--dim);font-size:15px;margin-left:8px;opacity:0;transition:opacity .2s;}
+  .adj.show{opacity:1;color:var(--playhead);}
+
+  /* gesture cues */
+  #cue{position:absolute;left:0;right:0;top:392px;text-align:center;opacity:0;pointer-events:none;}
+  #cue.show{opacity:1;}
+  #cueGlyph{position:relative;height:64px;}
+  #tapRing{position:absolute;left:50%;top:50%;width:26px;height:26px;margin:-13px 0 0 -13px;border-radius:50%;
+    border:3px solid #fff;box-shadow:0 0 14px rgba(255,94,168,.9);}
+  #tapDot{position:absolute;left:50%;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border-radius:50%;background:#fff;}
+  #swipeArrow{position:absolute;left:50%;top:50%;margin-top:-20px;font-size:40px;color:#fff;text-shadow:0 0 14px var(--playhead);}
+  #cueLabel{font-size:16px;color:var(--ink);text-shadow:0 0 10px rgba(255,94,168,.7);margin-top:2px;}
+
+  #fade{position:absolute;inset:0;background:#000;opacity:0;pointer-events:none;}
+
+  /* modal focus while the settings menu is open */
+  #head,#beats,#scoreBox{transition:opacity .35s, transform .4s ease, top .4s ease;}
+  #stage.menuOpen #head,#stage.menuOpen #beats,#stage.menuOpen #scoreBox{opacity:.1;}
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="title">ii–V–I Practice Loop<small id="keyTag"></small></div>
+  <div id="head">
+    <div id="nowDiag"></div>
+    <div id="nowChord">—</div>
+    <div id="cArrow">›</div>
+    <div id="nextChord"></div>
+    <div id="nextDiag"></div>
+  </div>
+  <div id="beats"></div>
+  <div id="scoreBox">
+    <div id="rotLabel"></div>
+    <img id="snippet" alt="" />
+    <div id="pips"><i></i><i></i><i></i><i></i></div>
+  </div>
+  <div id="countin"></div>
+  <div id="menu">
+    <h3>SETTINGS</h3>
+    <div class="mrow" id="mTempo"><span class="k">Tempo</span><span class="adj" id="adjT">▼</span><span class="v"><span id="mBpm">120</span> bpm</span></div>
+    <div class="mrow" id="mKey"><span class="k">Key</span><span class="adj" id="adjK">◀</span><span class="v" id="mKeyV">C</span></div>
+    <div class="hint">↑↓ choose · ←→ adjust</div>
+  </div>
+  <div id="cue">
+    <div id="cueGlyph"><div id="tapRing"></div><div id="tapDot"></div><div id="swipeArrow">←</div></div>
+    <div id="cueLabel"></div>
+  </div>
+  <div id="hud">
+    <div><span class="k">TEMPO</span><span class="v"><span id="bpm">120</span> bpm</span></div>
+    <div><span class="k">STATE</span><span class="v playing" id="state">playing</span></div>
+    <div><span class="k">BAR</span><span class="v" id="bar">1</span></div>
+  </div>
+  <div id="fade"></div>
+</div>
+
+<script src="/app/js/chords.js"></script>
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var C = window.SS.Chords;
+
+  // ---- musical content -----------------------------------------------------
+  // one rotation = 4 bars; the printed snippets are Dmin7 / G7 / Cmaj7 (+ resolution bar)
+  var KEYS = {
+    C:  ["Dm7", "G7", "Cmaj7", "Cmaj7"],
+    Bb: ["Cm7", "F7", "Bbmaj7", "Bbmaj7"],
+  };
+  var BPB = 4, ROT = 16; // beats per bar / per rotation
+
+  // ---- deterministic clock timeline ---------------------------------------
+  // segments: {t0,t1, beats(tau), bpm(tau), state, count(tau)?}
+  var segs = [], events = [], T = 0, B = 0;
+  function seg(dur, o) { o.t0 = T; o.t1 = T + dur; segs.push(o); T += dur; }
+  function play(nBeats, bpm) { var b0 = B, d = nBeats * 60 / bpm;
+    seg(d, { beats: function (u) { return b0 + u * bpm / 60; }, bpm: function () { return bpm; }, state: "playing" }); B += nBeats; }
+  function ramp(bp0, bp1, dur) { var b0 = B;
+    seg(dur, { beats: function (u) { return b0 + (bp0 * u + (bp1 - bp0) * u * u / (2 * dur)) / 60; },
+               bpm: function (u) { return bp0 + (bp1 - bp0) * u / dur; }, state: "playing" });
+    B += (bp0 + bp1) / 2 * dur / 60; }
+  function pauseHold(dur, bpm) { var b0 = B;
+    seg(dur, { beats: function () { return b0; }, bpm: function () { return bpm; }, state: "paused" }); }
+  function countIn(n, bpm) { var b0 = B, d = n * 60 / bpm;
+    seg(d, { beats: function () { return b0; }, bpm: function () { return bpm; }, state: "countin",
+             count: function (u) { return Math.max(1, Math.ceil(n - u * bpm / 60)); } }); }
+  function jump(nBeats) { B += nBeats; }
+  function at(name, dur) { events.push({ name: name, t0: T, t1: T + (dur || 0) }); }
+
+  // ---- storyboard ----------------------------------------------------------
+  at("keyC"); at("view:score");
+  countIn(4, 120);                       // 4-3-2-1
+  play(ROT, 120);                        // rotation 1 — snippet 1 (scale)
+  play(ROT, 120);                        // rotation 2 — snippet 2 (modes)
+  play(6, 120);                          // rotation 3 (snippet 3) ... play into bar 2
+  at("cue:tap-pause", 0.9);
+  pauseHold(1.5, 120);                   // tap -> paused (frozen)
+  at("cue:tap-play", 0.9);
+  jump(-(B % BPB));                      // resume snaps to the bar start
+  countIn(4, 120);
+  play(ROT - 4, 120);                    // finish rotation 3
+  play(9, 120);                          // rotation 4 (snippet 4), into bar 3
+  at("cue:swipe-back", 1.0);
+  jump(-(9 % BPB) - BPB);                // ← snap back a full bar (bar 15 -> 14 on the HUD)
+  play(BPB + 8, 120);                    // replay it + finish the rotation
+  play(4, 120);                          // rotation 5 (snippet 5) bar 1
+  at("menu:open"); at("menu:sel-tempo");
+  play(4, 120);                          // menu visible, tempo row selected
+  at("menu:adj-tempo", 2.4);
+  ramp(120, 90, 2.4);                    // BPM eases down 120 -> 90, dots slow
+  play(ROT - (B % ROT || ROT), 90);      // finish rotation 5 at 90
+  at("menu:close");
+  play(ROT, 90);                         // rotation 6 (snippet 6) at 90 bpm
+  at("view:chords");                     // ---- chords-only finale ----
+  play(4, 90);
+  at("menu:open"); at("menu:sel-key");
+  play(3, 90);
+  at("menu:adj-key", 0.5); at("keyBb");
+  play(3, 90);
+  at("menu:close");
+  play(22, 90);                          // big now/next, no score
+  at("fade", 1.2);
+  pauseHold(1.2, 90);
+  var DURATION = T;
+
+  // ---- static DOM prep -----------------------------------------------------
+  var beatsEl = $("beats");
+  for (var i = 0; i < BPB; i++) beatsEl.appendChild(document.createElement("i"));
+  var imgs = [];
+  for (var n = 1; n <= 6; n++) { var im = new Image(); im.src = "/build/exercises_alpha/" + n + ".png"; imgs.push(im); }
+  var diagCache = {};
+  function diag(name, w, h) {
+    var k = name + "|" + w;
+    if (!diagCache[k]) diagCache[k] = C.diagramSVG(name, { w: w, h: h, label: false });
+    return diagCache[k];
+  }
+  var ROTNAMES = ["1 · C major scale", "2 · modes", "3 · arpeggios", "4 · chromatic", "5 · guide tones", "6 · enclosures"];
+
+  // ---- seek ---------------------------------------------------------------
+  var last = {};
+  function set(el, prop, val) { var k = el.id + prop; if (last[k] === val) return; last[k] = val; if (prop === "text") el.textContent = val; else if (prop === "html") el.innerHTML = val; else el.style[prop] = val; }
+  function evAt(t) { var on = {}; events.forEach(function (e) { if (e.t1 > e.t0) { if (t >= e.t0 && t < e.t1) on[e.name] = (t - e.t0) / (e.t1 - e.t0); } else if (t >= e.t0) on[e.name] = true; }); return on; }
+  function latest(t, prefix) { var v = null; events.forEach(function (e) { if (t >= e.t0 && e.name.indexOf(prefix) === 0) v = e.name.slice(prefix.length); }); return v; }
+
+  function seek(t) {
+    t = Math.max(0, Math.min(DURATION - 0.001, t));
+    var s = segs[0];
+    for (var i = 0; i < segs.length; i++) if (t >= segs[i].t0 && t < segs[i].t1) { s = segs[i]; break; }
+    var u = t - s.t0, beats = s.beats(u), bpm = Math.round(s.bpm(u));
+    var on = evAt(t);
+    var key = latest(t, "key") || "C";
+    var chords = KEYS[key];
+    var view = latest(t, "view:") || "score";
+
+    var bar = Math.floor(beats / BPB), bib = bar % BPB, rot = Math.min(5, Math.floor(bar / BPB));
+    var now = chords[bib], next = chords[(bib + 1) % BPB];
+    if (next === now) next = chords[(bib + 2) % BPB] === now ? chords[0] : chords[(bib + 2) % BPB];
+
+    var menuOpenNow = false;
+    events.forEach(function (e) { if (t >= e.t0) { if (e.name === "menu:open") menuOpenNow = true; if (e.name === "menu:close") menuOpenNow = false; } });
+    document.getElementById("stage").className = (view === "chords" ? "chordsOnly" : "") + (menuOpenNow ? " menuOpen" : "");
+    set($("keyTag"), "text", " " + key + " · " + bpm + " bpm");
+    set($("nowChord"), "text", now); set($("nextChord"), "text", next);
+    var big = view === "chords";
+    set($("nowDiag"), "html", diag(now, big ? 104 : 96, big ? 120 : 108));
+    set($("nextDiag"), "html", diag(next, big ? 84 : 80, big ? 98 : 92));
+
+    // beat dots (hidden during count-in)
+    var showDots = s.state !== "countin";
+    var bInBar = Math.floor(beats % BPB);
+    for (var d = 0; d < BPB; d++) set(beatsEl.children[d], "html") /* noop keep */, beatsEl.children[d].className = (showDots && d <= bInBar) ? "on" : "";
+    beatsEl.style.visibility = showDots ? "visible" : "hidden";
+
+    // score snippet + pips
+    if (view === "score") {
+      set($("rotLabel"), "text", "EXERCISE " + ROTNAMES[rot]);
+      var want = imgs[rot].src; if ($("snippet").src !== want) $("snippet").src = want;
+      var pips = $("pips").children;
+      for (var p = 0; p < 4; p++) pips[p].className = p === bib ? "on" : "";
+    }
+
+    // count-in
+    if (s.state === "countin") { set($("countin"), "text", String(s.count(u))); set($("countin"), "opacity", "0.95"); }
+    else set($("countin"), "opacity", "0");
+
+    // HUD
+    set($("bpm"), "text", String(bpm));
+    set($("bar"), "text", String(bar + 1));
+    var st = s.state === "paused" ? "paused" : "playing";
+    set($("state"), "text", st); $("state").className = "v " + (st === "paused" ? "paused" : "playing");
+
+    // menu
+    var menuOpen = menuOpenNow;
+    $("menu").className = menuOpen ? "show" : "";
+    if (menuOpen) {
+      var sel = latest(t, "menu:sel-") || "tempo";
+      $("mTempo").className = "mrow" + (sel === "tempo" ? " sel" : "");
+      $("mKey").className = "mrow" + (sel === "key" ? " sel" : "");
+      set($("mBpm"), "text", String(bpm));
+      set($("mKeyV"), "text", key + (key === "C" ? " major" : " major"));
+      $("adjT").className = "adj" + (on["menu:adj-tempo"] !== undefined ? " show" : "");
+      $("adjK").className = "adj" + (on["menu:adj-key"] !== undefined ? " show" : "");
+    }
+
+    // gesture cues
+    var cue = null, label = "";
+    if (on["cue:tap-pause"] !== undefined) { cue = "tap"; label = "tap — pause"; }
+    if (on["cue:tap-play"] !== undefined) { cue = "tap"; label = "tap — play"; }
+    if (on["cue:swipe-back"] !== undefined) { cue = "swipe"; label = "swipe ← — back a bar"; }
+    $("cue").className = cue ? "show" : "";
+    if (cue) {
+      var prog = on["cue:tap-pause"] !== undefined ? on["cue:tap-pause"] : (on["cue:tap-play"] !== undefined ? on["cue:tap-play"] : on["cue:swipe-back"]);
+      set($("cueLabel"), "text", label);
+      $("tapRing").style.display = cue === "tap" ? "block" : "none";
+      $("tapDot").style.display = cue === "tap" ? "block" : "none";
+      $("swipeArrow").style.display = cue === "swipe" ? "block" : "none";
+      if (cue === "tap") { var r = 1 + 1.6 * prog; $("tapRing").style.transform = "scale(" + r + ")"; $("tapRing").style.opacity = String(1 - prog * 0.85); }
+      else { $("swipeArrow").style.transform = "translateX(" + (40 - 110 * prog) + "px)"; $("swipeArrow").style.opacity = String(prog < 0.85 ? 1 : (1 - prog) / 0.15); }
+    }
+
+    // fade out
+    var f = on["fade"]; set($("fade"), "opacity", f !== undefined ? String(f) : "0");
+  }
+
+  window.DemoCapture = {
+    info: function () { return { duration: DURATION }; },
+    seek: seek,
+    transparent: function () { document.documentElement.style.background = "transparent"; document.body.style.background = "transparent"; $("stage").style.background = "transparent"; },
+  };
+
+  // live preview when opened by hand
+  var t0 = performance.now();
+  (function loop(now) { if (!window.__capturing) seek(((now - t0) / 1000) % DURATION); requestAnimationFrame(loop); })(t0);
+})();
+</script>
+</body>
+</html>
