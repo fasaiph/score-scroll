@@ -24,8 +24,7 @@
   /* chord header (same family as the app's chart view) */
   #head{position:absolute;left:0;right:0;top:40px;height:128px;display:flex;justify-content:center;align-items:center;gap:20px;
     transition:transform .4s ease, top .4s ease;}
-  #nowDiag{width:96px;height:108px;} #nextDiag{width:80px;height:92px;opacity:.6;}
-  #nowChord{font-size:60px;font-weight:800;color:#fff;text-shadow:0 0 18px rgba(255,94,168,.9);min-width:150px;text-align:center;line-height:1;}
+  #nowChord{font-size:66px;font-weight:800;color:#fff;text-shadow:0 0 18px rgba(255,94,168,.9);min-width:150px;text-align:center;line-height:1;}
   #cArrow{color:var(--dim);font-size:28px;}
   #nextChord{font-size:34px;font-weight:700;color:var(--accent);opacity:.75;min-width:88px;text-align:center;}
   #beats{position:absolute;left:0;right:0;top:172px;display:flex;justify-content:center;gap:10px;transition:top .4s ease;}
@@ -41,11 +40,9 @@
   #pips i.on{background:var(--playhead);box-shadow:0 0 8px var(--playhead);}
 
   /* chords-only mode: header grows to the middle, score hidden */
-  #stage.chordsOnly #head{top:150px;height:180px;gap:14px;padding:0 6px;}
-  #stage.chordsOnly #nowChord{font-size:72px;min-width:0;flex:0 1 auto;}
-  #stage.chordsOnly #nextChord{font-size:36px;min-width:0;flex:0 1 auto;}
-  #stage.chordsOnly #nowDiag{width:104px;height:120px;flex:none;}
-  #stage.chordsOnly #nextDiag{width:84px;height:98px;flex:none;}
+  #stage.chordsOnly #head{top:150px;height:180px;gap:22px;}
+  #stage.chordsOnly #nowChord{font-size:100px;min-width:0;}
+  #stage.chordsOnly #nextChord{font-size:48px;min-width:0;}
   #stage.chordsOnly #beats{top:352px;}
   #stage.chordsOnly #scoreBox{display:none;}
 
@@ -90,11 +87,9 @@
 <div id="stage">
   <div id="title">ii–V–I Practice Loop<small id="keyTag"></small></div>
   <div id="head">
-    <div id="nowDiag"></div>
     <div id="nowChord">—</div>
     <div id="cArrow">›</div>
     <div id="nextChord"></div>
-    <div id="nextDiag"></div>
   </div>
   <div id="beats"></div>
   <div id="scoreBox">
@@ -121,12 +116,10 @@
   <div id="fade"></div>
 </div>
 
-<script src="/app/js/chords.js"></script>
 <script>
 (function () {
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
-  var C = window.SS.Chords;
 
   // ---- musical content -----------------------------------------------------
   // one rotation = 4 bars; the printed snippets are Dmin7 / G7 / Cmaj7 (+ resolution bar)
@@ -195,12 +188,6 @@
   for (var i = 0; i < BPB; i++) beatsEl.appendChild(document.createElement("i"));
   var imgs = [];
   for (var n = 1; n <= 6; n++) { var im = new Image(); im.src = "/build/exercises_alpha/" + n + ".png"; imgs.push(im); }
-  var diagCache = {};
-  function diag(name, w, h) {
-    var k = name + "|" + w;
-    if (!diagCache[k]) diagCache[k] = C.diagramSVG(name, { w: w, h: h, label: false });
-    return diagCache[k];
-  }
   var ROTNAMES = ["1 · C major scale", "2 · modes", "3 · arpeggios", "4 · chromatic", "5 · guide tones", "6 · enclosures"];
 
   // ---- seek ---------------------------------------------------------------
@@ -228,9 +215,6 @@
     document.getElementById("stage").className = (view === "chords" ? "chordsOnly" : "") + (menuOpenNow ? " menuOpen" : "");
     set($("keyTag"), "text", " " + key + " · " + bpm + " bpm");
     set($("nowChord"), "text", now); set($("nextChord"), "text", next);
-    var big = view === "chords";
-    set($("nowDiag"), "html", diag(now, big ? 104 : 96, big ? 120 : 108));
-    set($("nextDiag"), "html", diag(next, big ? 84 : 80, big ? 98 : 92));
 
     // beat dots (hidden during count-in)
     var showDots = s.state !== "countin";
