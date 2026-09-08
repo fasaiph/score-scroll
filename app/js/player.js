@@ -111,10 +111,16 @@ SS.Transport = function (cfg) {
     skip: function () { var ref = (pos < playFromBeat) ? playFromBeat : pos; seekBeat(barStartOf(ref) + bpb); },
     isPlaying: function () { return playing; },
     barStartOf: barStartOf,
-    // offline overlay capture: render the exact frame for `beat` (count-in = beats < firstBeat)
-    capture: function (beat) {
-      captureMode = true; playing = true; playFromBeat = barStartOf(firstBeat);
-      cfg.stateEl.textContent = "playing"; cfg.stateEl.className = "v playing";
+    // offline overlay capture: render the exact frame for `beat`.
+    // opts: { playFrom: anchor bar-start beat (count-in shows while beat < playFrom),
+    //         paused: render the paused state (frozen strip, no count-in) }
+    capture: function (beat, opts) {
+      opts = (opts && typeof opts === "object") ? opts : {};
+      captureMode = true;
+      playFromBeat = (opts.playFrom !== undefined) ? opts.playFrom : barStartOf(firstBeat);
+      playing = !opts.paused;
+      var st = opts.paused ? "paused" : "playing";
+      cfg.stateEl.textContent = st; cfg.stateEl.className = "v " + st;
       pos = beat; draw();
     },
     info: function () { return { firstBeat: firstBeat, lastBeat: lastBeat, bpm: bpm, countIn: countIn, beatsPerBar: bpb, bars: bars }; },

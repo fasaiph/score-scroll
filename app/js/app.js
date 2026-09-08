@@ -257,7 +257,7 @@
   function captureTarget() { return chartEl.classList.contains("active") ? chart : player; }
   window.ScoreCapture = {
     info: function () { return captureTarget().info(); },
-    seek: function (beat, fps) { captureTarget().capture(beat, fps); },
+    seek: function (beat, arg) { captureTarget().capture(beat, arg); },
     transparent: function () {           // for alpha overlay frames: black = transparent on the glasses anyway
       document.documentElement.style.background = "transparent"; document.body.style.background = "transparent";
       $("stage").style.background = "transparent";
