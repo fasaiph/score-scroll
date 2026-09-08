@@ -235,6 +235,13 @@
   // ?chart=<id>[&transpose=N][&capo=N]  opens a chord song straight into the chart (paused at the start)
   function deepLink() {
     var q = {}; location.search.slice(1).split("&").forEach(function (kv) { var p = kv.split("="); if (p[0]) q[decodeURIComponent(p[0])] = decodeURIComponent(p[1] || ""); });
+    if (q.score) {                                     // score songs: open the notation player directly
+      return SS.Library.get(q.score).then(function (rec) {
+        if (!rec || isChords(rec)) return false;
+        openSong(rec);
+        return true;
+      });
+    }
     if (!q.chart) return Promise.resolve(false);
     return SS.Library.get(q.chart).then(function (rec) {
       if (!rec || !isChords(rec)) return false;
@@ -247,9 +254,10 @@
       return true;
     });
   }
+  function captureTarget() { return chartEl.classList.contains("active") ? chart : player; }
   window.ScoreCapture = {
-    info: function () { return chart.info(); },
-    seek: function (beat, fps) { chart.capture(beat, fps); },
+    info: function () { return captureTarget().info(); },
+    seek: function (beat, fps) { captureTarget().capture(beat, fps); },
     transparent: function () {           // for alpha overlay frames: black = transparent on the glasses anyway
       document.documentElement.style.background = "transparent"; document.body.style.background = "transparent";
       $("stage").style.background = "transparent";

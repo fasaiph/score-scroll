@@ -169,5 +169,6 @@ SS.Player = function (refs) {
     setSchedule: setSchedule,
     unlockAudio: tr.unlockAudio, toggle: tr.toggle, pause: tr.pause, tempo: tr.tempo,
     back: tr.back, skip: tr.skip, isPlaying: tr.isPlaying,
+    capture: tr.capture, info: tr.info,
   };
 };
