@@ -59,7 +59,8 @@
           meta = "chords" + (r.key ? " · " + esc(r.key) : "");
         }
         else meta = r.sample ? "sample" : (r.instrument || "violin");
-        d.innerHTML = '<span>' + (isChords(r) ? "🎸" : "🎻") + '</span><span>' + esc(r.title) + '</span>' +
+        var icon = isChords(r) ? "🎸" : (/piano|keyboard/i.test(r.instrument || "") ? "🎹" : "🎻");
+        d.innerHTML = '<span>' + icon + '</span><span>' + esc(r.title) + '</span>' +
           '<span class="meta">' + meta + '</span>' +
           (r.sample ? "" : '<span class="del" title="delete">🗑️</span>');
         d.onclick = function (e) {

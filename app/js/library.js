@@ -43,6 +43,7 @@ SS.Library = (function () {
         { id: "sample-tokyo", title: "My Name is Tokyo", file: "samples/tokyo.musicxml", type: "score", instrument: "violin", bpm: 120 },
         { id: "sample-losingu", title: "Losing U", file: "samples/losingu.musicxml", type: "score", instrument: "violin", bpm: 122 },
         { id: "sample-planet", title: "Planet in the Sky", file: "samples/planet.musicxml", type: "score", instrument: "violin", bpm: 120 },
+        { id: "sample-fur-elise", title: "Für Elise", file: "samples/fur-elise.musicxml", type: "score", instrument: "piano", bpm: 144 },
         { id: "sample-cant-help", title: "Can't Help Falling in Love", file: "samples/cant-help-falling-in-love.cho", type: "chords", instrument: "guitar" },
       ];
       // retire samples no longer in the list (uploads are untouched)
