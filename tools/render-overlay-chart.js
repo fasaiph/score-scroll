@@ -23,6 +23,7 @@ const id = isScore ? songId.slice(6) : songId;
 const transpose = +trArg || 0, capo = +capoArg || 0;
 const fps = +fpsArg || 30;
 const port = +portArg || 8765;
+const maxSec = +process.env.MAX_SECONDS || 0;   // 0 = full song
 fs.mkdirSync(outDir, { recursive: true });
 
 const browser = await puppeteer.launch({
@@ -42,7 +43,8 @@ const info = await page.evaluate(() => window.ScoreCapture.info());
 const startBeat = info.firstBeat - info.countIn;
 const endBeat = info.lastBeat + 1;
 const bps = info.bpm / 60;
-const dur = (endBeat - startBeat) / bps;
+let dur = (endBeat - startBeat) / bps;
+if (maxSec) dur = Math.min(dur, maxSec);
 const nFrames = Math.ceil(dur * fps);
 console.log(`${songId} tr${transpose} capo${capo}: ${info.bpm}bpm, ${info.beatsPerBar}/bar, beats ${startBeat}..${endBeat}, ${dur.toFixed(1)}s -> ${nFrames} frames @${fps}fps`);
 
