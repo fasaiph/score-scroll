@@ -16,7 +16,9 @@ html,body{margin:0;padding:0;height:100%;background:#000;
 #library h1{font-size:32px;font-weight:700;text-align:center;margin:6px 0 4px;
   color:#ffd6ee;text-shadow:0 0 14px rgba(255,94,168,.7);}
 #library .tag{text-align:center;color:var(--dim);font-size:15px;margin-bottom:26px;}
-#songList{display:flex;flex-direction:column;gap:12px;max-height:392px;overflow:hidden;}
+#songList{display:flex;flex-direction:column;gap:12px;max-height:392px;overflow:hidden;scroll-behavior:smooth;
+  -webkit-mask-image:linear-gradient(transparent 0,#000 14px,#000 calc(100% - 14px),transparent);
+  mask-image:linear-gradient(transparent 0,#000 14px,#000 calc(100% - 14px),transparent);}
 .row{display:flex;align-items:center;gap:14px;padding:16px 20px;border-radius:16px;
   border:2px solid #20323a;font-size:22px;}
 .row .meta{margin-left:auto;color:var(--dim);font-size:15px;}

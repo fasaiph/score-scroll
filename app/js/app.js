@@ -71,6 +71,12 @@
       }
       listEl.appendChild(d);
     });
+    // keep the selected row comfortably in view (D-pad scrolling, no visible scrollbar)
+    var selEl = listEl.children[sel];
+    if (selEl) {
+      var target = (selEl.offsetTop - listEl.offsetTop) - (listEl.clientHeight - selEl.offsetHeight) / 2;
+      listEl.scrollTop = Math.max(0, Math.min(listEl.scrollHeight - listEl.clientHeight, target));
+    }
   }
 
   function remove(rec) {
