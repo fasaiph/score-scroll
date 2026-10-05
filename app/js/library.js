@@ -46,10 +46,23 @@ SS.Library = (function () {
         { id: "sample-fur-elise", title: "Für Elise", file: "samples/fur-elise.musicxml", type: "score", instrument: "piano", bpm: 144 },
         { id: "sample-cant-help", title: "Can't Help Falling in Love", file: "samples/cant-help-falling-in-love.cho", type: "chords", instrument: "guitar" },
       ];
-      // retire samples no longer in the list (uploads are untouched)
+      // retire samples no longer in the list; migrate stale fields; drop duplicates
       var keep = {}; samples.forEach(function (sm) { keep[sm.id] = 1; });
+      var norm = function (t) { return String(t || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[-_]+/g, " ").trim(); };
       for (var j = 0; j < existing.length; j++) {
-        if (existing[j].sample && !keep[existing[j].id]) await this.remove(existing[j].id);
+        var r = existing[j];
+        if (r.sample && !keep[r.id]) { await this.remove(r.id); continue; }
+        if (r.sample && r.countIn !== undefined) {
+          // stored countIn predates the one-full-bar default (e.g. 4 on a 3/8 piece)
+          delete r.countIn; await this.save(r);
+        }
+        if (!r.sample) {
+          // a non-sample copy of a bundled song is a duplicate row — drop it
+          for (var k = 0; k < samples.length; k++) {
+            var a = norm(r.title), b = norm(samples[k].title);
+            if (a && b && (a.indexOf(b) === 0 || b.indexOf(a) === 0)) { await this.remove(r.id); break; }
+          }
+        }
       }
       for (var i = 0; i < samples.length; i++) {
         var sm = samples[i]; if (have[sm.id]) continue;

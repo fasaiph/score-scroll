@@ -139,7 +139,7 @@ SS.Chart = function (refs) {
     build();
     scrollY = targetY = 0; refs.linesInner.style.transform = "translate3d(0,0,0)";
     tr.load({ bpm: o.bpm || s.bpm, beatsPerBar: s.beatsPerBar, firstBeat: 0,
-      lastBeat: Math.max(0, s.bars.length * s.beatsPerBar - 1), countIn: s.countIn || 4, click: !!o.click });
+      lastBeat: Math.max(0, s.bars.length * s.beatsPerBar - 1), countIn: s.countIn || s.beatsPerBar, click: !!o.click });
   }
 
   return {

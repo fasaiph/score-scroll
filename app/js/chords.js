@@ -58,7 +58,7 @@ SS.Chords = (function () {
 
   // ---------- ChordPro parser ----------
   function parse(text) {
-    var song = { title: "", artist: "", key: null, bpm: 0, beatsPerBar: 4, countIn: 4, capo: 0, transpose: 0, lines: [], bars: [], chordSet: [] };
+    var song = { title: "", artist: "", key: null, bpm: 0, beatsPerBar: 4, countIn: 0, capo: 0, transpose: 0, lines: [], bars: [], chordSet: [] };
     var lines = String(text).replace(/\r/g, "").split("\n");
     var barIdx = 0, lastLyricLine = null, seen = {}, pendingLabel = "";
     lines.forEach(function (raw) {
@@ -122,6 +122,7 @@ SS.Chords = (function () {
       song.key = { pc: pitchClass(c0.root), minor: /^(m|min|-)(?!aj)/.test(c0.qual) };
     }
     if (!song.bpm) song.bpm = 100;
+    if (!song.countIn) song.countIn = song.beatsPerBar;   // default: count one full bar
     return song;
   }
 
