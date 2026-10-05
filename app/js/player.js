@@ -65,9 +65,13 @@ SS.Transport = function (cfg) {
 
   function draw() {
     if (!song) return;
-    var countingIn = playing && pos < playFromBeat;
+    // The count-in ends on the first DOWNBEAT at/after playFromBeat, so with an
+    // anacrusis the pickup sounds during the final count ("1") and the notated
+    // downbeat lands where the next count would fall.
+    var countEnd = (playFromBeat < off) ? off : playFromBeat;
+    var countingIn = playing && pos < countEnd;
     var anchor = (pos < playFromBeat) ? playFromBeat : pos;
-    if (countingIn) { cfg.countin.textContent = Math.ceil(playFromBeat - pos); cfg.countin.style.opacity = 0.95; }
+    if (countingIn) { cfg.countin.textContent = Math.ceil(countEnd - pos); cfg.countin.style.opacity = 0.95; }
     else cfg.countin.style.opacity = 0;
     cfg.barNumEl.textContent = Math.min(bars, Math.max(1, Math.floor((anchor - off) / bpb) + 1));
     var prog = Math.max(0, Math.min(1, (anchor - firstBeat) / ((lastBeat - firstBeat) || 1)));
@@ -88,11 +92,12 @@ SS.Transport = function (cfg) {
     requestAnimationFrame(frame);
   }
 
-  // begin from the current bar's start, after a count-in
+  // begin from the current bar's start, after a count-in aligned to the downbeat grid
   function startCountIn() {
     var shown = (pos < playFromBeat) ? playFromBeat : pos;
     playFromBeat = barStartOf(shown);
-    pos = playFromBeat - countIn;
+    var countEnd = (playFromBeat < off) ? off : playFromBeat;
+    pos = countEnd - countIn;
     lastBeatClicked = Math.floor(pos) - 1;
     setPlaying(true);
   }
