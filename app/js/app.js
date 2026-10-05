@@ -37,10 +37,13 @@
   function isChords(rec) { return rec.type === "chords"; }
 
   // ---------- library ----------
+  // The upload row is hidden for now (gig mode: library is curated in the repo).
+  // Set SHOW_UPLOAD true (or add ?upload=1) to bring it back — the flow still works.
+  var SHOW_UPLOAD = /[?&]upload=1/.test(location.search);
   function refresh() {
     return SS.Library.list().then(function (songs) {
-      items = [{ type: "add" }].concat(songs.map(function (s) { return { type: "song", rec: s }; }));
-      if (sel >= items.length) sel = items.length - 1;
+      items = (SHOW_UPLOAD ? [{ type: "add" }] : []).concat(songs.map(function (s) { return { type: "song", rec: s }; }));
+      if (sel >= items.length) sel = Math.max(0, items.length - 1);
       renderList();
     });
   }
