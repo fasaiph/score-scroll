@@ -43,6 +43,15 @@ SS.render = async function render(xml, mountEl, opts) {
     const ts = osmd.sheet.SourceMeasures[0].ActiveTimeSignature;
     if (ts) { beatsPerBar = ts.Numerator; beatUnit = ts.Denominator; }
   } catch (e) { /* default 4/4 */ }
+  // anacrusis: a shorter first measure shifts the whole downbeat grid. Measure the
+  // pickup's real length in beats; the transport phases strong clicks / bar numbers /
+  // bar navigation by it (schedule.barOffset).
+  let barOffset = 0;
+  try {
+    const m0len = osmd.sheet.SourceMeasures[0].Duration.RealValue * beatUnit;
+    if (m0len > 0 && m0len < beatsPerBar - 1e-6) barOffset = +m0len.toFixed(5);
+  } catch (e) { /* no pickup */ }
+
   let bpm = opts.bpm || 0;
   if (!bpm) { try { bpm = Math.round(osmd.sheet.DefaultStartTempoInBpm) || 0; } catch (e) {} }
   if (!bpm) bpm = 120;
@@ -98,7 +107,7 @@ SS.render = async function render(xml, mountEl, opts) {
 
   const box = mountEl.getBoundingClientRect();
   const schedule = {
-    bpm, beatsPerBar, countIn: opts.countIn || 4,
+    bpm, beatsPerBar, barOffset, countIn: opts.countIn || beatsPerBar,
     widthPx: Math.ceil(box.width), heightPx: Math.ceil(box.height),
     points: pts,
   };

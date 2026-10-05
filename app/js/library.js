@@ -56,7 +56,7 @@ SS.Library = (function () {
         try {
           var text = await fetch(sm.file).then(function (r) { return r.text(); });
           var rec = { id: sm.id, title: sm.title, type: sm.type, instrument: sm.instrument, sample: true, createdAt: 1 + i };
-          if (sm.type === "chords") rec.chordpro = text; else { rec.xml = text; rec.bpm = sm.bpm; rec.countIn = 4; }
+          if (sm.type === "chords") rec.chordpro = text; else { rec.xml = text; rec.bpm = sm.bpm; }
           await this.save(rec);
         } catch (e) { /* samples are best-effort */ }
       }

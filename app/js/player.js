@@ -31,23 +31,25 @@ SS.Transport = function (cfg) {
     o.connect(g); g.connect(a.destination); o.start(t); o.stop(t + 0.08);
   }
 
-  var song = null, bpm = 120, bpb = 4, firstBeat = 0, lastBeat = 0, bars = 1, countIn = 4;
+  var song = null, bpm = 120, bpb = 4, firstBeat = 0, lastBeat = 0, bars = 1, countIn = 4, off = 0;
   var clickOn = true, playing = false, pos = 0, lastBeatClicked = -999, playFromBeat = 0;
   var rafOn = false, lastT = 0, captureMode = false;   // capture: pos driven externally, rAF inert
 
   function load(s) {
     song = s; bpm = s.bpm; bpb = s.beatsPerBar || 4;
     firstBeat = s.firstBeat; lastBeat = s.lastBeat; countIn = s.countIn || 4;
+    off = s.barOffset || 0;                       // anacrusis: first full bar starts here
     if (s.click !== undefined) clickOn = !!s.click;
-    bars = Math.ceil((lastBeat + 1) / bpb);
+    bars = Math.ceil((lastBeat + 1 - off) / bpb);
     cfg.bpmEl.textContent = bpm;
     resetToStart(); draw();
     if (!rafOn) { rafOn = true; requestAnimationFrame(frame); }
   }
 
   function barStartOf(beat) {
-    var songStartBar = Math.floor(firstBeat / bpb) * bpb;
-    return Math.max(songStartBar, Math.floor((beat + 0.001) / bpb) * bpb);
+    var songStart = Math.min(Math.floor(firstBeat / bpb) * bpb, firstBeat);
+    if (beat < off) return songStart;             // inside the pickup bar
+    return Math.max(songStart, off + Math.floor((beat - off + 0.001) / bpb) * bpb);
   }
   function setPlaying(p) {
     playing = p;
@@ -67,7 +69,7 @@ SS.Transport = function (cfg) {
     var anchor = (pos < playFromBeat) ? playFromBeat : pos;
     if (countingIn) { cfg.countin.textContent = Math.ceil(playFromBeat - pos); cfg.countin.style.opacity = 0.95; }
     else cfg.countin.style.opacity = 0;
-    cfg.barNumEl.textContent = Math.min(bars, Math.floor(anchor / bpb) + 1);
+    cfg.barNumEl.textContent = Math.min(bars, Math.max(1, Math.floor((anchor - off) / bpb) + 1));
     var prog = Math.max(0, Math.min(1, (anchor - firstBeat) / ((lastBeat - firstBeat) || 1)));
     cfg.barFill.style.width = (prog * 100).toFixed(1) + "%";
     if (cfg.onDraw) cfg.onDraw(anchor, { pos: pos, playing: playing, countingIn: countingIn, playFromBeat: playFromBeat, beatsPerBar: bpb, bpm: bpm });
@@ -79,7 +81,7 @@ SS.Transport = function (cfg) {
     if (playing && song) {
       pos += dt * (bpm / 60);
       var b = Math.floor(pos);
-      if (b !== lastBeatClicked) { lastBeatClicked = b; if (clickOn) click(((b % bpb) + bpb) % bpb === 0); }
+      if (b !== lastBeatClicked) { lastBeatClicked = b; if (clickOn) click((((b - Math.round(off)) % bpb) + bpb) % bpb === 0); }
       if (pos >= lastBeat + 1) resetToStart();
     }
     draw();
@@ -105,10 +107,10 @@ SS.Transport = function (cfg) {
     back: function () {
       var ref = (pos < playFromBeat) ? playFromBeat : pos;
       if (!playing && ref <= barStartOf(firstBeat) + 0.01) { if (cfg.onBackAtStart) cfg.onBackAtStart(); return; }
-      var bs = Math.floor((ref + 1e-6) / bpb) * bpb;
+      var bs = barStartOf(ref + 1e-6);
       seekBeat((ref - bs > 0.25) ? bs : bs - bpb);
     },
-    skip: function () { var ref = (pos < playFromBeat) ? playFromBeat : pos; seekBeat(barStartOf(ref) + bpb); },
+    skip: function () { var ref = (pos < playFromBeat) ? playFromBeat : pos; seekBeat(barStartOf(ref + bpb)); },
     isPlaying: function () { return playing; },
     barStartOf: barStartOf,
     // offline overlay capture: render the exact frame for `beat`.
@@ -123,7 +125,7 @@ SS.Transport = function (cfg) {
       cfg.stateEl.textContent = st; cfg.stateEl.className = "v " + st;
       pos = beat; draw();
     },
-    info: function () { return { firstBeat: firstBeat, lastBeat: lastBeat, bpm: bpm, countIn: countIn, beatsPerBar: bpb, bars: bars }; },
+    info: function () { return { firstBeat: firstBeat, lastBeat: lastBeat, bpm: bpm, countIn: countIn, beatsPerBar: bpb, bars: bars, barOffset: off }; },
   };
 };
 
@@ -167,8 +169,8 @@ SS.Player = function (refs) {
     refs.notation.style.transformOrigin = "top left";
     refs.notation.style.transform = "scale(" + scale + ")";
     refs.strip.style.top = Math.round((LANE_H - TARGET_H) / 2) + "px";
-    tr.load({ bpm: schedule.bpm, beatsPerBar: schedule.beatsPerBar, firstBeat: firstBeat, lastBeat: lastBeat,
-      countIn: schedule.countIn || 4, click: true });
+    tr.load({ bpm: schedule.bpm, beatsPerBar: schedule.beatsPerBar, barOffset: schedule.barOffset || 0,
+      firstBeat: firstBeat, lastBeat: lastBeat, countIn: schedule.countIn || 4, click: true });
   }
 
   return {
